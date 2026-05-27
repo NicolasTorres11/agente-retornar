@@ -1,14 +1,18 @@
-const {
-  default: makeWASocket,
+import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
-} = require("@whiskeysockets/baileys");
-const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-const WebSocket = require("ws");
-const qrcode = require("qrcode-terminal");
-const pino = require("pino");
+} from "@whiskeysockets/baileys";
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import WebSocket from "ws";
+import qrcode from "qrcode-terminal";
+import pino from "pino";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const PYTHON_WS_URL =
   process.env.PYTHON_WS_URL || "ws://127.0.0.1:8000/ws/whatsapp";

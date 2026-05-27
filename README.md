@@ -180,6 +180,15 @@ Esta opcion evita crear la app en Meta para la demostracion local. Necesitas
 Node.js 20 o superior y, preferiblemente, un numero de WhatsApp dedicado a
 pruebas.
 
+Si aparece `ERR_REQUIRE_ESM`, actualiza el repositorio para obtener el bridge
+ESM corregido. Si `node --version` muestra Node.js 18, actualiza Node primero:
+
+```bash
+node --version
+nvm install 20
+nvm use 20
+```
+
 Instala el bridge una sola vez:
 
 ```bash
