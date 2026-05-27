@@ -25,6 +25,28 @@ let socket = null;
 let pythonSocket = null;
 let whatsappConnected = false;
 const outboundIds = new Set();
+const expectedOutboundTexts = new Map();
+
+function outboundTextKey(to, text) {
+  return `${to}\n${text}`;
+}
+
+function expectOutbound(to, text) {
+  const key = outboundTextKey(to, text);
+  expectedOutboundTexts.set(key, (expectedOutboundTexts.get(key) || 0) + 1);
+}
+
+function consumeExpectedOutbound(to, text) {
+  const key = outboundTextKey(to, text);
+  const pending = expectedOutboundTexts.get(key) || 0;
+  if (!pending) return false;
+  if (pending === 1) {
+    expectedOutboundTexts.delete(key);
+  } else {
+    expectedOutboundTexts.set(key, pending - 1);
+  }
+  return true;
+}
 
 function connectPython() {
   if (pythonSocket && pythonSocket.readyState === WebSocket.OPEN) return;
@@ -36,13 +58,16 @@ function connectPython() {
   });
 
   pythonSocket.on("message", async (raw) => {
+    let message = null;
     try {
-      const message = JSON.parse(raw.toString());
+      message = JSON.parse(raw.toString());
       if (!message.to || !message.text || !socket || !whatsappConnected) return;
+      expectOutbound(message.to, message.text);
       const sent = await socket.sendMessage(message.to, { text: message.text });
       if (sent.key && sent.key.id) outboundIds.add(sent.key.id);
       console.log(`Bot -> WhatsApp (${message.to}): respuesta enviada`);
     } catch (error) {
+      if (message?.to && message?.text) consumeExpectedOutbound(message.to, message.text);
       console.error("No se pudo enviar respuesta a WhatsApp:", error.message);
     }
   });
@@ -117,10 +142,14 @@ async function startWhatsApp() {
       const messageId = message.key?.id;
       const to = message.key?.remoteJid || "";
       if (!to || to.endsWith("@g.us") || !messageId) continue;
-      if (outboundIds.delete(messageId)) continue;
-      if (message.key.fromMe && !ALLOW_FROM_ME) continue;
       const text = textFrom(message);
       if (!text) continue;
+      if (message.key.fromMe && consumeExpectedOutbound(to, text)) {
+        outboundIds.delete(messageId);
+        continue;
+      }
+      if (outboundIds.delete(messageId)) continue;
+      if (message.key.fromMe && !ALLOW_FROM_ME) continue;
       console.log(`WhatsApp -> Bot (${to}): mensaje recibido (${text.length} caracteres)`);
       sendInbound({
         from: to,

@@ -90,6 +90,66 @@ class SQLiteConversationRepository:
             await self._audit(db, "state_changed", wa_id, {"state": state.value})
             await db.commit()
 
+    async def get_open_appointment(self, wa_id: str) -> dict[str, str] | None:
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                """SELECT tipo_cita_encrypted, especialidad_encrypted, eps_encrypted,
+                          urgencia_encrypted
+                   FROM appointment_requests
+                   WHERE wa_id = ? AND status = 'collecting'""",
+                (wa_id,),
+            )
+            row = await cursor.fetchone()
+        if not row:
+            return None
+        columns = {
+            "tipo_cita": "tipo_cita_encrypted",
+            "especialidad": "especialidad_encrypted",
+            "eps": "eps_encrypted",
+            "urgencia": "urgencia_encrypted",
+        }
+        return {
+            slot: self.cipher.decrypt(row[column])
+            for slot, column in columns.items()
+            if row[column] is not None
+        }
+
+    async def save_appointment(
+        self, wa_id: str, slots: dict[str, str], status: str = "collecting"
+    ) -> None:
+        timestamp = _now()
+        encrypted = {
+            name: self.cipher.encrypt(slots[name]) if name in slots else None
+            for name in ("tipo_cita", "especialidad", "eps", "urgencia")
+        }
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                """INSERT INTO appointment_requests
+                   (wa_id, tipo_cita_encrypted, especialidad_encrypted, eps_encrypted,
+                    urgencia_encrypted, status, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(wa_id) DO UPDATE SET
+                     tipo_cita_encrypted = excluded.tipo_cita_encrypted,
+                     especialidad_encrypted = excluded.especialidad_encrypted,
+                     eps_encrypted = excluded.eps_encrypted,
+                     urgencia_encrypted = excluded.urgencia_encrypted,
+                     status = excluded.status,
+                     updated_at = excluded.updated_at""",
+                (
+                    wa_id,
+                    encrypted["tipo_cita"],
+                    encrypted["especialidad"],
+                    encrypted["eps"],
+                    encrypted["urgencia"],
+                    status,
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            await self._audit(db, "appointment_updated", wa_id, {"status": status})
+            await db.commit()
+
     async def record_classification(self, message_id: str, result: ClassificationResult) -> None:
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(

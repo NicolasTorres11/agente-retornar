@@ -232,7 +232,9 @@ Escanea el QR. Luego escribe al numero conectado desde otro WhatsApp:
 ```text
 Quiero una cita
 SI AUTORIZO
-Necesito cita con psiquiatria
+Quisiera agendar una cita
+Psiquiatria. Compensar y no es de control.
+No urgente
 ```
 
 Para mostrar el protocolo de crisis durante la demo:

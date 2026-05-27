@@ -258,7 +258,8 @@ Seguridad local:
 
 - `wa_bridge/auth_info/` contiene la sesion vinculada y no se versiona.
 - El bridge no imprime el contenido de los mensajes en consola.
-- Los mensajes enviados por el bot se excluyen para evitar bucles.
+- Los mensajes enviados por el bot se excluyen por ID y texto esperado para
+  evitar bucles, incluido el modo "Mensaje a ti mismo".
 
 ## 5. Flujo De Un Mensaje
 
@@ -276,11 +277,18 @@ Usuario: "SI AUTORIZO"
   -> Registra consentimiento
   -> Bot confirma autorizacion
 
-Usuario: "Necesito cita con psiquiatria"
+Usuario: "Quisiera agendar una cita"
   -> Clasificador: solicitud_cita
   -> Consentimiento existente
-  -> Bot solicita especialidad/EPS/detalle faltante
-  -> SQLite registra respuesta enviada
+  -> Bot solicita tipo de cita, especialidad, EPS y urgencia
+
+Usuario: "Psiquiatria. Compensar y no es de control."
+  -> SQLite guarda especialidad, EPS y tipo de cita cifrados
+  -> Bot solicita solo urgencia faltante
+
+Usuario: "No urgente"
+  -> SQLite completa la solicitud de cita
+  -> Bot confirma registro para posterior asignacion de fecha
 ```
 
 ### 5.2. Flujo de crisis

@@ -30,13 +30,26 @@ def test_local_flow_consent_then_appointment(tmp_path, monkeypatch) -> None:
         assert consent.json()["status"] == "consent_accepted"
 
         processed = client.post(
-            "/dev/simulate", json={"wa_id": "571", "text": "Necesito cita con psiquiatria"}
+            "/dev/simulate", json={"wa_id": "571", "text": "Quisiera agendar una cita"}
         )
         assert processed.json()["status"] == "processed"
         assert processed.json()["classification"]["category"] == "solicitud_cita"
+        assert "especialidad" in processed.json()["responses"][0]
+
+        details = client.post(
+            "/dev/simulate",
+            json={"wa_id": "571", "text": "Psiquiatria. Compensar y no es de control."},
+        )
+        assert "urgente" in details.json()["responses"][0]
+        assert "EPS Compensar" in details.json()["responses"][0]
+
+        completed = client.post("/dev/simulate", json={"wa_id": "571", "text": "No urgente"})
+        assert "Registre tu solicitud de cita" in completed.json()["responses"][0]
+        assert "Psiquiatria" in completed.json()["responses"][0]
+        assert "Compensar" in completed.json()["responses"][0]
 
         messages = client.get("/dev/messages/571").json()
-        assert len(messages) == 6
+        assert len(messages) == 10
         assert messages[-1]["direction"] == "outbound"
 
 

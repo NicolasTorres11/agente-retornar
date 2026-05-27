@@ -45,6 +45,18 @@ CREATE TABLE IF NOT EXISTS consents (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS appointment_requests (
+    wa_id TEXT PRIMARY KEY,
+    tipo_cita_encrypted BLOB,
+    especialidad_encrypted BLOB,
+    eps_encrypted BLOB,
+    urgencia_encrypted BLOB,
+    status TEXT NOT NULL DEFAULT 'collecting',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (wa_id) REFERENCES sessions(wa_id)
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
     id TEXT PRIMARY KEY,
     event TEXT NOT NULL,
@@ -55,4 +67,3 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 CREATE INDEX IF NOT EXISTS idx_messages_wa_id ON messages(wa_id);
 CREATE INDEX IF NOT EXISTS idx_escalations_wa_id ON escalations(wa_id);
-

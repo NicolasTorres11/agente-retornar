@@ -10,6 +10,8 @@ from src.classifier.models import ClassificationResult
 class FlowState(StrEnum):
     NEW = "new"
     AWAITING_CONSENT = "awaiting_consent"
+    AWAITING_APPOINTMENT_INFO = "awaiting_appointment_info"
+    APPOINTMENT_REQUESTED = "appointment_requested"
     IN_PROGRESS = "in_progress"
     HANDOFF = "handoff"
     CRISIS_ACTIVE = "crisis_active"

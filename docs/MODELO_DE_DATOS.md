@@ -100,7 +100,25 @@ Conserva evidencia de las respuestas a la solicitud de autorizacion.
 Al mismo tiempo se actualiza `sessions.consent_given` para decisiones rapidas
 durante la conversacion.
 
-## 6. Tabla `escalations`
+## 6. Tabla `appointment_requests`
+
+Conserva el avance de una solicitud de cita mientras se recolectan los slots
+definidos para la demo local.
+
+| Campo | Tipo | Uso |
+|---|---|---|
+| `wa_id` | `TEXT PRIMARY KEY` | Conversacion asociada. |
+| `tipo_cita_encrypted` | `BLOB` | Control, primera vez o reprogramacion, cifrado. |
+| `especialidad_encrypted` | `BLOB` | Especialidad solicitada, cifrada. |
+| `eps_encrypted` | `BLOB` | EPS informada por el usuario, cifrada. |
+| `urgencia_encrypted` | `BLOB` | Urgente o no urgente, cifrado. |
+| `status` | `TEXT` | `collecting` o `requested`. |
+| `created_at`, `updated_at` | `TEXT` | Trazabilidad temporal. |
+
+Cuando estan completos `tipo_cita`, `especialidad`, `eps` y `urgencia`, el
+bot confirma que registro la solicitud; no afirma que una cita ya fue asignada.
+
+## 7. Tabla `escalations`
 
 Registra casos derivados a atencion humana.
 
@@ -123,7 +141,7 @@ Ejemplos:
 | "Olvide tomar la sertralina" | `consulta_clinica` | `urgent` |
 | "Quiero poner una queja" | `pqr` | `normal` |
 
-## 7. Tabla `audit_log`
+## 8. Tabla `audit_log`
 
 Guarda eventos del sistema sin registrar el identificador directo en la
 columna de auditoria.
@@ -142,9 +160,10 @@ Eventos implementados:
 |---|---|
 | `consent_recorded` | Usuario acepta o rechaza consentimiento. |
 | `state_changed` | Sesion cambia de estado. |
+| `appointment_updated` | Solicitud de cita recopila datos o queda registrada. |
 | `escalation_created` | Se deriva un caso a atencion humana. |
 
-## 8. Cifrado Y Datos Sensibles
+## 9. Cifrado Y Datos Sensibles
 
 El adaptador SQLite usa `FieldCipher`, basado en Fernet:
 
@@ -158,6 +177,7 @@ Campos protegidos:
 |---|---|
 | `messages.content_encrypted` | Cifrado reversible necesario para consultar demo. |
 | `sessions.user_name_encrypted` | Cifrado reversible. |
+| `appointment_requests.*_encrypted` | Slots de cita cifrados en reposo. |
 | `audit_log.wa_id_hash` | Hash SHA-256 para correlacion de auditoria. |
 
 Variables sensibles excluidas del repositorio:
@@ -169,7 +189,7 @@ Variables sensibles excluidas del repositorio:
 | Base con conversaciones | `data/*.db*` |
 | Sesion de WhatsApp QR | `wa_bridge/auth_info/` |
 
-## 9. Operaciones Del Repositorio
+## 10. Operaciones Del Repositorio
 
 El puerto `ConversationRepository` permite que la aplicacion invoque estas
 operaciones:
@@ -181,6 +201,8 @@ operaciones:
 | `has_consent()` | Consulta si puede continuar el flujo automatizado. |
 | `record_consent()` | Guarda decision de autorizacion. |
 | `set_state()` | Cambia estado conversacional y audita. |
+| `get_open_appointment()` | Recupera los datos aun incompletos de cita. |
+| `save_appointment()` | Guarda slots cifrados y estado de solicitud. |
 | `record_classification()` | Asocia clasificacion al mensaje recibido. |
 | `record_escalation()` | Inserta handoff/crisis y audita. |
 | `queue_outbound()` | Persiste la respuesta antes de envio. |
@@ -189,7 +211,7 @@ operaciones:
 | `list_messages()` | Permite observar la conversacion en desarrollo. |
 | `list_escalations()` | Permite mostrar handoffs en la demo. |
 
-## 10. Diferencias Frente Al Modelo Productivo
+## 11. Diferencias Frente Al Modelo Productivo
 
 El diseno institucional descrito plantea capacidades adicionales:
 
