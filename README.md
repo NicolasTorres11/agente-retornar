@@ -252,6 +252,7 @@ ruff check src scripts tests
 
 ```text
 docs/                           Documentacion tecnica del codigo y procesos
+img-architectures/              Diagramas visuales usados en arquitectura
 src/                            Aplicacion hexagonal local
 scripts/demo_classifier.py      Demo aislada del clasificador
 scripts/run_local.py            Servidor FastAPI local

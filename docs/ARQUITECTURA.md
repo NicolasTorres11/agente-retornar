@@ -39,21 +39,7 @@ Objetivos principales:
 
 La vision de produccion plantea una arquitectura desacoplada y auditable:
 
-```text
-Usuario WhatsApp
-       |
-WhatsApp Business Cloud API (Meta)
-       |
-Webhook HTTPS / validacion de firma
-       |
-Cola durable de mensajes
-       |
-Agente conversacional / clasificador
-       |                         |
-Persistencia y auditoria      Handoff humano
-       |                         |
-Sistemas institucionales      Equipo clinico/operativo
-```
+![Arquitectura objetivo del agente en Azure](../img-architectures/arquitectura-agente-objetivo.png)
 
 Componentes esperados para una operacion productiva:
 
@@ -73,40 +59,10 @@ limites del dominio sin requerir infraestructura de nube.
 
 ## 5. Arquitectura Implementada Para Desarrollo Local
 
-```text
-             +-----------------------------+
-             |  Entrada de mensajes        |
-             |-----------------------------|
-             | HTTP /dev/simulate          |
-             | WhatsApp QR con Baileys     |
-             | Webhook Meta opcional       |
-             +-------------+---------------+
-                           |
-                           v
-             +-----------------------------+
-             | FastAPI                     |
-             | src/api/app.py              |
-             +-------------+---------------+
-                           |
-                           v
-             +-----------------------------+
-             | ConversationService         |
-             | reglas de flujo y handoff   |
-             +------+------+---------------+
-                    |      |
-             +------+      +------------------+
-             v                                v
-   +-------------------+          +-----------------------+
-   | Clasificador      |          | Puertos de salida     |
-   | offline / Azure   |          | repositorio/mensajes  |
-   +-------------------+          +-----------+-----------+
-                                              |
-                          +-------------------+-------------------+
-                          v                                       v
-                 +-------------------+                  +----------------+
-                 | SQLite cifrado    |                  | Baileys / Meta |
-                 +-------------------+                  +----------------+
-```
+La siguiente vista relaciona la arquitectura objetivo, la implementacion
+ejecutable para desarrollo local y la separacion hexagonal del codigo:
+
+![Arquitectura del prototipo local y arquitectura hexagonal](../img-architectures/arquitectura-agente-local-hexagonal.png)
 
 ### Correspondencia entre vision y prototipo
 
@@ -123,29 +79,9 @@ limites del dominio sin requerir infraestructura de nube.
 
 ## 6. Arquitectura Hexagonal Del Codigo
 
-La implementacion local separa decisiones de negocio de detalles tecnicos:
-
-```text
-                    Adaptadores de entrada
-           FastAPI HTTP | WebSocket QR | Webhook Meta
-                            |
-                            v
-                 +---------------------+
-                 | Capa de aplicacion  |
-                 | ConversationService |
-                 +---------+-----------+
-                           |
-             +-------------+-------------+
-             |                           |
-             v                           v
-        Dominio                      Puertos
- mensajes/estados          repositorio y mensajeria
-                                         |
-                    +--------------------+-------------------+
-                    v                                        v
-              SQLite/Fernet                        Baileys o Meta API
-              Adaptadores externos/salida
-```
+La implementacion local, visualizada en la seccion anterior, separa
+decisiones de negocio de detalles tecnicos mediante adaptadores de entrada,
+capa de aplicacion, dominio, puertos y adaptadores externos de salida.
 
 Beneficios:
 
@@ -232,4 +168,3 @@ No implementado aun:
 | Meta Cloud API | Adaptador implementado; no requerido para la demo QR. |
 | Integracion Compuconta/SIH | Arquitectura futura, no implementada. |
 | Handoff con panel/Teams | Arquitectura futura, no implementada. |
-
