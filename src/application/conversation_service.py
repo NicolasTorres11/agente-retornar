@@ -81,7 +81,11 @@ class ConversationService:
             return ProcessOutcome("processed", [HANDOFF_RESPONSE], result)
         if result.category == Category.SOLICITUD_CITA or appointment_pending:
             if appointment is None:
-                appointment = await self._recover_appointment_slots(message.wa_id)
+                appointment = (
+                    await self._recover_appointment_slots(message.wa_id)
+                    if appointment_pending
+                    else {}
+                )
             response, state, priority = await self._appointment_response(message, appointment)
             if priority:
                 await self.repository.record_escalation(

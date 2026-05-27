@@ -99,6 +99,30 @@ def test_video_appointment_case_offers_simulated_availability(tmp_path, monkeypa
         assert "EPS Sanitas" in available.json()["responses"][0]
 
 
+def test_new_appointment_does_not_reuse_previous_urgent_slots(tmp_path, monkeypatch) -> None:
+    with TestClient(_app(tmp_path, monkeypatch)) as client:
+        client.post("/dev/simulate", json={"wa_id": "repeat", "text": "Hola"})
+        client.post("/dev/simulate", json={"wa_id": "repeat", "text": "SI AUTORIZO"})
+        client.post("/dev/simulate", json={"wa_id": "repeat", "text": "Quiero una cita"})
+        urgent = client.post(
+            "/dev/simulate",
+            json={"wa_id": "repeat", "text": "Primera vez, psiquiatria, Sanitas, urgente"},
+        )
+        assert "solicitud como urgente" in urgent.json()["responses"][0]
+
+        new_request = client.post(
+            "/dev/simulate", json={"wa_id": "repeat", "text": "Quiero una cita"}
+        )
+        assert "Con gusto te ayudo a gestionar tu cita" in new_request.json()["responses"][0]
+        assert "solicitud como urgente" not in new_request.json()["responses"][0]
+
+        available = client.post(
+            "/dev/simulate",
+            json={"wa_id": "repeat", "text": "Control, psiquiatria, Sanitas, no urgente"},
+        )
+        assert "disponibilidades simuladas" in available.json()["responses"][0]
+
+
 def test_previous_registered_appointment_is_upgraded_to_schedule_selection(
     tmp_path, monkeypatch
 ) -> None:
