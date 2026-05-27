@@ -1,6 +1,8 @@
 """Conversation orchestration use case for the local agent."""
 
+import re
 import unicodedata
+from datetime import date, timedelta
 
 from src.classifier import Action, Category, ClassificationResult, classify
 from src.domain.models import FlowState, InboundMessage, OutboundMessage, Priority, ProcessOutcome
@@ -66,15 +68,30 @@ class ConversationService:
         appointment_pending = appointment is not None or await self._has_pending_appointment_prompt(
             message.wa_id
         )
+        if (
+            result.category == Category.SOLICITUD_CITA
+            and result.suggested_action == Action.ESCALAR_HUMANO
+            and not appointment_pending
+        ):
+            await self.repository.record_escalation(
+                message.wa_id, result.suggested_action.value, Priority.NORMAL, result
+            )
+            await self.repository.set_state(message.wa_id, FlowState.HANDOFF)
+            await self._respond(message.wa_id, HANDOFF_RESPONSE)
+            return ProcessOutcome("processed", [HANDOFF_RESPONSE], result)
         if result.category == Category.SOLICITUD_CITA or appointment_pending:
             if appointment is None:
                 appointment = await self._recover_appointment_slots(message.wa_id)
-            response, state = await self._appointment_response(message, appointment)
+            response, state, priority = await self._appointment_response(message, appointment)
+            if priority:
+                await self.repository.record_escalation(
+                    message.wa_id, "urgent_appointment", priority, result
+                )
             await self.repository.set_state(message.wa_id, state)
             await self._respond(message.wa_id, response)
             return ProcessOutcome("processed", [response], result)
 
-        response, state, priority = self._route(result)
+        response, state, priority = self._route(result, message.text)
         if priority:
             await self.repository.record_escalation(
                 message.wa_id, result.suggested_action.value, priority, result
@@ -84,18 +101,31 @@ class ConversationService:
             await self._respond(message.wa_id, response)
         return ProcessOutcome("processed", [response] if response else [], result)
 
-    def _route(self, result: ClassificationResult) -> tuple[str | None, FlowState, Priority | None]:
+    def _route(
+        self, result: ClassificationResult, message_text: str
+    ) -> tuple[str | None, FlowState, Priority | None]:
         if result.category == Category.INFO_ADMINISTRATIVA:
             return (
-                "Recibi tu consulta administrativa. "
-                "Nuestro equipo confirmara la informacion requerida.",
+                self._administrative_response(message_text),
                 FlowState.IN_PROGRESS,
                 None,
             )
         if result.category == Category.CONSULTA_CLINICA:
-            return HANDOFF_RESPONSE, FlowState.HANDOFF, Priority.URGENT
+            return (
+                "Tu mensaje requiere revision de un profesional clinico. "
+                "No puedo recomendar cambios de medicacion ni valorar sintomas por este medio. "
+                "He registrado el caso para atencion prioritaria.",
+                FlowState.HANDOFF,
+                Priority.URGENT,
+            )
         if result.category == Category.PQR:
-            return HANDOFF_RESPONSE, FlowState.HANDOFF, Priority.NORMAL
+            return (
+                "Lamentamos el inconveniente. He registrado tu solicitud como PQR para "
+                "revision del equipo de atencion al usuario. La respuesta formal tiene un "
+                "plazo maximo de 15 dias habiles.",
+                FlowState.HANDOFF,
+                Priority.NORMAL,
+            )
         if result.suggested_action == Action.ESCALAR_HUMANO:
             return HANDOFF_RESPONSE, FlowState.HANDOFF, Priority.NORMAL
         if result.suggested_action == Action.IGNORAR:
@@ -108,8 +138,38 @@ class ConversationService:
 
     async def _appointment_response(
         self, message: InboundMessage, stored_slots: dict[str, str]
-    ) -> tuple[str, FlowState]:
+    ) -> tuple[str, FlowState, Priority | None]:
+        if stored_slots.get("_status") == "requested":
+            slots = {key: value for key, value in stored_slots.items() if key != "_status"}
+            await self.repository.save_appointment(
+                message.wa_id, slots, status="awaiting_selection"
+            )
+            return (
+                self._appointment_availability_response(slots),
+                FlowState.AWAITING_APPOINTMENT_SLOT,
+                None,
+            )
+        if stored_slots.get("_status") == "awaiting_selection":
+            selection = self._appointment_selection(message.text)
+            if not selection:
+                return (
+                    "Para confirmar la cita de demostracion, responde Opcion 1, "
+                    "Opcion 2 u Opcion 3.",
+                    FlowState.AWAITING_APPOINTMENT_SLOT,
+                    None,
+                )
+            appointment = self._appointment_availability()[selection - 1]
+            await self.repository.save_appointment(message.wa_id, stored_slots, status="scheduled")
+            return (
+                "Cita de demostracion confirmada: "
+                f"{stored_slots['especialidad']} - {appointment}. "
+                "Este agendamiento es simulado para la prueba local.",
+                FlowState.APPOINTMENT_SCHEDULED,
+                None,
+            )
+
         slots = {**stored_slots, **self._extract_appointment_slots(message.text)}
+        slots.pop("_status", None)
         missing = [slot for slot in APPOINTMENT_SLOTS if slot not in slots]
         if missing:
             await self.repository.save_appointment(message.wa_id, slots)
@@ -125,15 +185,23 @@ class ConversationService:
             return (
                 f"{prefix}Indica {required}.",
                 FlowState.AWAITING_APPOINTMENT_INFO,
+                None,
             )
 
-        await self.repository.save_appointment(message.wa_id, slots, status="requested")
+        if slots["urgencia"] == "Urgente":
+            await self.repository.save_appointment(message.wa_id, slots, status="urgent_handoff")
+            return (
+                "Registre tu solicitud como urgente. Una persona del equipo de "
+                "agendamiento la revisara con prioridad para asignarte atencion adecuada.",
+                FlowState.HANDOFF,
+                Priority.URGENT,
+            )
+
+        await self.repository.save_appointment(message.wa_id, slots, status="awaiting_selection")
         return (
-            "Perfecto. Registre tu solicitud de cita "
-            f"{slots['tipo_cita'].lower()} para {slots['especialidad']} con EPS "
-            f"{slots['eps']}, prioridad {slots['urgencia'].lower()}. "
-            "Un asesor confirmara disponibilidad y fecha por este canal.",
-            FlowState.APPOINTMENT_REQUESTED,
+            self._appointment_availability_response(slots),
+            FlowState.AWAITING_APPOINTMENT_SLOT,
+            None,
         )
 
     async def _recover_appointment_slots(self, wa_id: str) -> dict[str, str]:
@@ -160,6 +228,110 @@ class ConversationService:
             "urgencia": "prioridad",
         }
         return ", ".join(f"{labels[key]} {slots[key]}" for key in APPOINTMENT_SLOTS if key in slots)
+
+    @staticmethod
+    def _appointment_selection(text: str) -> int | None:
+        normalized = text.lower().strip()
+        match = re.search(r"(?:opcion\s*)?([123])\b", normalized)
+        return int(match.group(1)) if match else None
+
+    @staticmethod
+    def _appointment_availability_response(slots: dict[str, str]) -> str:
+        options = "\n".join(
+            f"{index}. {slot}"
+            for index, slot in enumerate(ConversationService._appointment_availability(), start=1)
+        )
+        return (
+            "Tengo estas disponibilidades simuladas para tu cita "
+            f"{slots['tipo_cita'].lower()} de {slots['especialidad']} con EPS {slots['eps']}:\n"
+            f"{options}\nResponde Opcion 1, Opcion 2 u Opcion 3 para confirmar."
+        )
+
+    @staticmethod
+    def _appointment_availability() -> list[str]:
+        weekday_names = {
+            0: "lunes",
+            1: "martes",
+            2: "miercoles",
+            3: "jueves",
+            4: "viernes",
+        }
+        month_names = {
+            1: "enero",
+            2: "febrero",
+            3: "marzo",
+            4: "abril",
+            5: "mayo",
+            6: "junio",
+            7: "julio",
+            8: "agosto",
+            9: "septiembre",
+            10: "octubre",
+            11: "noviembre",
+            12: "diciembre",
+        }
+        hours = ("9:00 a.m.", "11:30 a.m.", "3:00 p.m.")
+        current = date.today()
+        cursor = current + timedelta(days=1)
+        remaining_weekdays: list[date] = []
+        while cursor.weekday() >= current.weekday() and cursor.weekday() < 5:
+            remaining_weekdays.append(cursor)
+            cursor += timedelta(days=1)
+        if not remaining_weekdays:
+            while len(remaining_weekdays) < 2:
+                if cursor.weekday() < 5:
+                    remaining_weekdays.append(cursor)
+                cursor += timedelta(days=1)
+        weekdays = [
+            remaining_weekdays[0],
+            remaining_weekdays[min(1, len(remaining_weekdays) - 1)],
+            remaining_weekdays[min(1, len(remaining_weekdays) - 1)],
+        ]
+        return [
+            f"{weekday_names[day.weekday()]} {day.day} de {month_names[day.month]} "
+            f"de {day.year}, {hour}"
+            for day, hour in zip(weekdays, hours, strict=True)
+        ]
+
+    @staticmethod
+    def _administrative_response(text: str) -> str:
+        normalized = "".join(
+            character
+            for character in unicodedata.normalize("NFD", text.lower())
+            if unicodedata.category(character) != "Mn"
+        )
+        if "horario" in normalized or "sabado" in normalized:
+            return (
+                "Nuestros horarios de atencion son: lunes a viernes de 7:00 a.m. a "
+                "7:00 p.m. y sabados de 8:00 a.m. a 1:00 p.m. "
+                "La atencion de urgencias opera 24/7."
+            )
+        if "ubic" in normalized or "donde" in normalized or "sede" in normalized:
+            return (
+                "Para esta demostracion, la sede principal esta en Bogota. "
+                "Al llegar, recepcion puede orientarte al servicio de psiquiatria."
+            )
+        if "sanitas" in normalized:
+            return (
+                "Para la demostracion registramos convenio con EPS Sanitas. "
+                "La autorizacion y cobertura se validan antes de confirmar atencion."
+            )
+        if "cuanto cuesta" in normalized or "particular" in normalized:
+            return (
+                "El valor de una consulta particular debe confirmarse segun especialidad "
+                "y modalidad. Puedo ayudarte a registrar una solicitud de cita."
+            )
+        if "autorizacion" in normalized:
+            return (
+                "Solicita la autorizacion directamente a tu EPS indicando la especialidad "
+                "requerida. Cuando tengas el soporte, podemos registrar tu cita."
+            )
+        if "certificado" in normalized:
+            return (
+                "Los certificados de incapacidad son gestionados por el equipo autorizado "
+                "despues de validar la atencion correspondiente."
+            )
+        return "Puedo orientarte sobre horarios, sede, convenios, autorizaciones o tramites."
 
     @staticmethod
     def _extract_appointment_slots(text: str) -> dict[str, str]:
@@ -198,7 +370,7 @@ class ConversationService:
             slots["tipo_cita"] = "Reprogramacion"
         if any(term in normalized for term in ("no urgente", "sin urgencia", "no es urgente")):
             slots["urgencia"] = "No urgente"
-        elif "urgente" in normalized or "prioritari" in normalized:
+        elif "urgente" in normalized or "prioritari" in normalized or "cita ya" in normalized:
             slots["urgencia"] = "Urgente"
         return slots
 

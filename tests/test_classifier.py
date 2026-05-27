@@ -20,7 +20,7 @@ def test_offline_appointment(monkeypatch) -> None:
     monkeypatch.setenv("CLASSIFIER_OFFLINE_MODE", "true")
     result = classify("Necesito agendar cita con psiquiatria", language_hint="es")
     assert result.category == Category.SOLICITUD_CITA
-    assert result.metadata.model_used == "offline_rules_v1"
+    assert result.metadata.model_used == "local_policy_v1"
 
 
 def test_non_spanish_always_handoffs(monkeypatch) -> None:
@@ -30,10 +30,10 @@ def test_non_spanish_always_handoffs(monkeypatch) -> None:
     assert result.suggested_action == Action.ESCALAR_HUMANO
 
 
-def test_without_configuration_fails_toward_human(monkeypatch) -> None:
+def test_policy_cases_do_not_require_azure_configuration(monkeypatch) -> None:
     monkeypatch.setenv("CLASSIFIER_OFFLINE_MODE", "false")
     monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
     monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
     result = classify("Quiero una cita", language_hint="es")
-    assert result.suggested_action == Action.ESCALAR_HUMANO
-    assert result.metadata.error is not None
+    assert result.suggested_action == Action.SOLICITAR_INFO
+    assert result.metadata.model_used == "local_policy_v1"

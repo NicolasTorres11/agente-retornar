@@ -25,6 +25,8 @@ def normalize_for_search(text: str) -> str:
 
 def _detect_language(text: str) -> str | None:
     searchable = normalize_for_search(text)
+    if "bonjour" in searchable or "rendez-vous" in searchable:
+        return "fr"
     spanish_markers = (
         "quiero",
         "necesito",

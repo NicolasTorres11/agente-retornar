@@ -85,7 +85,13 @@ Ejecutar el lote de casos preparado para el video:
 
 ```bash
 python scripts/demo_classifier.py --offline --batch tests/fixtures/mensajes_prueba.json
+pytest -q tests/test_evaluation_matrix.py
 ```
+
+Los casos definidos en las skills tienen reglas locales deterministicas para
+la demostracion: riesgo, citas, PQR, informacion administrativa, idioma,
+spam y ambiguedad no dependen de una respuesta variable del modelo. Azure
+OpenAI queda disponible como respaldo para mensajes fuera de esa matriz.
 
 ## Demo De La Aplicacion Completa
 
@@ -108,9 +114,11 @@ curl -s -X POST http://127.0.0.1:8000/dev/simulate \
 
 curl -s -X POST http://127.0.0.1:8000/dev/simulate \
   -H 'Content-Type: application/json' \
-  -d '{"wa_id":"573001111111","text":"Necesito cita con psiquiatria"}'
+  -d '{"wa_id":"573001111111","text":"Cita de control con psiquiatria por Sanitas, no urgente"}'
 
-curl -s http://127.0.0.1:8000/dev/messages/573001111111
+curl -s -X POST http://127.0.0.1:8000/dev/simulate \
+  -H 'Content-Type: application/json' \
+  -d '{"wa_id":"573001111111","text":"Opcion 1"}'
 ```
 
 Prueba que un primer mensaje critico se escala sin bloquearse por consentimiento:
@@ -148,8 +156,8 @@ python scripts/demo_classifier.py "Necesito agendar cita con psiquiatria"
 ```
 
 `offline_rules_v1` es un modo deterministico para desarrollo y video, no un
-reemplazo del modelo LLM. El detector de riesgo se ejecuta localmente antes
-del LLM en ambos modos.
+reemplazo del modelo LLM. `local_policy_v1` aplica las reglas verificables de
+las skills en ambos modos y el detector de riesgo se ejecuta antes del LLM.
 
 ## Conectar WhatsApp Cloud API
 
@@ -235,7 +243,16 @@ SI AUTORIZO
 Quisiera agendar una cita
 Psiquiatria. Compensar y no es de control.
 No urgente
+Opcion 1
 ```
+
+Para informacion administrativa, despues de autorizar puedes probar:
+
+```text
+Cuales son los horarios de atencion los sabados?
+```
+
+El bot responde directamente con el horario configurado para la demostracion.
 
 Para mostrar el protocolo de crisis durante la demo:
 

@@ -6,6 +6,7 @@ from .azure_client import AzureClassifierClient
 from .config import Settings
 from .models import Action, Category, ClassificationMetadata, ClassificationResult, RiskLevel
 from .offline_client import classify_offline
+from .policy import classify_by_policy
 from .preprocessor import preprocess
 from .risk_detector import detect_risk
 
@@ -53,14 +54,21 @@ def classify(message: str, *, language_hint: str | None = None) -> Classificatio
         )
 
     try:
+        output = classify_by_policy(prepared.searchable_text)
         settings = Settings()
-        if settings.classifier_offline_mode:
+        if output is not None:
+            metadata.model_used = "local_policy_v1"
+        elif settings.classifier_offline_mode:
             output = classify_offline(prepared.searchable_text)
             metadata.model_used = "offline_rules_v1"
         else:
             output = AzureClassifierClient(settings).classify(prepared.text)
             metadata.model_used = settings.azure_openai_deployment_name
-        action = Action.ESCALAR_HUMANO if metadata.is_non_spanish else output.suggested_action
+        action = (
+            Action.ESCALAR_HUMANO
+            if metadata.is_non_spanish and output.suggested_action != Action.IGNORAR
+            else output.suggested_action
+        )
         metadata.processing_ms = _elapsed_ms(started)
         return ClassificationResult(
             category=output.category,

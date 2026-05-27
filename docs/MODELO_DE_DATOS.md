@@ -112,11 +112,13 @@ definidos para la demo local.
 | `especialidad_encrypted` | `BLOB` | Especialidad solicitada, cifrada. |
 | `eps_encrypted` | `BLOB` | EPS informada por el usuario, cifrada. |
 | `urgencia_encrypted` | `BLOB` | Urgente o no urgente, cifrado. |
-| `status` | `TEXT` | `collecting` o `requested`. |
+| `status` | `TEXT` | `collecting`, `awaiting_selection`, `scheduled` o `urgent_handoff`. |
 | `created_at`, `updated_at` | `TEXT` | Trazabilidad temporal. |
 
-Cuando estan completos `tipo_cita`, `especialidad`, `eps` y `urgencia`, el
-bot confirma que registro la solicitud; no afirma que una cita ya fue asignada.
+Cuando estan completos `tipo_cita`, `especialidad`, `eps` y `urgencia`, una
+cita no urgente recibe horarios simulados locales y el usuario selecciona una
+opcion. La confirmacion aclara que la asignacion es solamente para la prueba.
+Una cita urgente se registra para revision prioritaria humana.
 
 ## 7. Tabla `escalations`
 

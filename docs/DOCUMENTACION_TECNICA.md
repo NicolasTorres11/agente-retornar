@@ -166,6 +166,7 @@ Archivos:
 | `models.py` | Categorias, acciones, riesgo y resultado Pydantic. |
 | `preprocessor.py` | Normalizacion, truncamiento y deteccion de idioma. |
 | `risk_detector.py` | Patrones deterministas para riesgo emocional. |
+| `policy.py` | Politicas deterministas para matriz obligatoria y respuestas estables. |
 | `classify.py` | Pipeline principal y reglas de seguridad. |
 | `offline_client.py` | Reglas locales deterministicas para la demo. |
 | `azure_client.py` | Integracion opcional con Azure OpenAI. |
@@ -288,10 +289,23 @@ Usuario: "Psiquiatria. Compensar y no es de control."
 
 Usuario: "No urgente"
   -> SQLite completa la solicitud de cita
-  -> Bot confirma registro para posterior asignacion de fecha
+  -> Bot muestra tres horarios de agenda simulada local
+
+Usuario: "Opcion 1"
+  -> Bot confirma la cita seleccionada
+  -> Aclara que el agendamiento es simulado para la prueba local
 ```
 
-### 5.2. Flujo de crisis
+### 5.2. Flujo administrativo directo
+
+```text
+Usuario autorizado: "Cuales son los horarios de atencion los sabados?"
+  -> Clasificador: info_administrativa
+  -> Bot responde lunes a viernes 7:00 a.m. a 7:00 p.m.,
+     sabados 8:00 a.m. a 1:00 p.m. y urgencias 24/7
+```
+
+### 5.3. Flujo de crisis
 
 ```text
 Usuario: "Me quiero matar, tengo las pastillas"
@@ -306,7 +320,7 @@ Usuario: "Me quiero matar, tengo las pastillas"
 La deteccion de crisis ocurre antes del consentimiento para no bloquear una
 respuesta urgente de seguridad.
 
-### 5.3. Flujo de consulta clinica no critica
+### 5.4. Flujo de consulta clinica no critica
 
 ```text
 Usuario autorizado: "Olvide tomar mi medicamento"

@@ -95,9 +95,10 @@ class SQLiteConversationRepository:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 """SELECT tipo_cita_encrypted, especialidad_encrypted, eps_encrypted,
-                          urgencia_encrypted
+                          urgencia_encrypted, status
                    FROM appointment_requests
-                   WHERE wa_id = ? AND status = 'collecting'""",
+                   WHERE wa_id = ?
+                     AND status IN ('collecting', 'requested', 'awaiting_selection')""",
                 (wa_id,),
             )
             row = await cursor.fetchone()
@@ -109,11 +110,13 @@ class SQLiteConversationRepository:
             "eps": "eps_encrypted",
             "urgencia": "urgencia_encrypted",
         }
-        return {
+        slots = {
             slot: self.cipher.decrypt(row[column])
             for slot, column in columns.items()
             if row[column] is not None
         }
+        slots["_status"] = row["status"]
+        return slots
 
     async def save_appointment(
         self, wa_id: str, slots: dict[str, str], status: str = "collecting"

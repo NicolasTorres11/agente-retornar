@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import json
@@ -44,12 +45,16 @@ def test_local_flow_consent_then_appointment(tmp_path, monkeypatch) -> None:
         assert "EPS Compensar" in details.json()["responses"][0]
 
         completed = client.post("/dev/simulate", json={"wa_id": "571", "text": "No urgente"})
-        assert "Registre tu solicitud de cita" in completed.json()["responses"][0]
+        assert "disponibilidades simuladas" in completed.json()["responses"][0]
         assert "Psiquiatria" in completed.json()["responses"][0]
         assert "Compensar" in completed.json()["responses"][0]
 
+        selected = client.post("/dev/simulate", json={"wa_id": "571", "text": "Opcion 1"})
+        assert "Cita de demostracion confirmada" in selected.json()["responses"][0]
+        assert "simulado para la prueba local" in selected.json()["responses"][0]
+
         messages = client.get("/dev/messages/571").json()
-        assert len(messages) == 10
+        assert len(messages) == 12
         assert messages[-1]["direction"] == "outbound"
 
 
@@ -62,6 +67,75 @@ def test_crisis_is_escalated_before_consent(tmp_path, monkeypatch) -> None:
         assert response.json()["classification"]["suggested_action"] == "escalar_crisis_emocional"
         escalations = client.get("/dev/escalations").json()
         assert escalations[0]["priority"] == "critical"
+
+
+def test_authorized_admin_question_gets_direct_answer(tmp_path, monkeypatch) -> None:
+    with TestClient(_app(tmp_path, monkeypatch)) as client:
+        client.post("/dev/simulate", json={"wa_id": "admin", "text": "Hola"})
+        client.post("/dev/simulate", json={"wa_id": "admin", "text": "SI AUTORIZO"})
+        response = client.post(
+            "/dev/simulate",
+            json={"wa_id": "admin", "text": "Cuales son los horarios de atencion los sabados?"},
+        )
+        assert "sabados de 8:00 a.m. a 1:00 p.m." in response.json()["responses"][0]
+
+
+def test_video_appointment_case_offers_simulated_availability(tmp_path, monkeypatch) -> None:
+    with TestClient(_app(tmp_path, monkeypatch)) as client:
+        client.post("/dev/simulate", json={"wa_id": "video", "text": "Hola"})
+        client.post("/dev/simulate", json={"wa_id": "video", "text": "SI AUTORIZO"})
+        request = client.post(
+            "/dev/simulate",
+            json={
+                "wa_id": "video",
+                "text": (
+                    "Hola, necesito agendar cita de control con psiquiatria, atiendo por Sanitas"
+                ),
+            },
+        )
+        assert "urgente" in request.json()["responses"][0]
+        available = client.post("/dev/simulate", json={"wa_id": "video", "text": "No urgente"})
+        assert "disponibilidades simuladas" in available.json()["responses"][0]
+        assert "EPS Sanitas" in available.json()["responses"][0]
+
+
+def test_previous_registered_appointment_is_upgraded_to_schedule_selection(
+    tmp_path, monkeypatch
+) -> None:
+    with TestClient(_app(tmp_path, monkeypatch)) as client:
+        client.post("/dev/simulate", json={"wa_id": "legacy", "text": "Hola"})
+        client.post("/dev/simulate", json={"wa_id": "legacy", "text": "SI AUTORIZO"})
+        asyncio.run(
+            client.app.state.repository.save_appointment(
+                "legacy",
+                {
+                    "tipo_cita": "Control",
+                    "especialidad": "Psiquiatria",
+                    "eps": "Sanitas",
+                    "urgencia": "No urgente",
+                },
+                status="requested",
+            )
+        )
+        response = client.post("/dev/simulate", json={"wa_id": "legacy", "text": "Continuar"})
+        assert "disponibilidades simuladas" in response.json()["responses"][0]
+
+
+def test_clinical_and_pqr_responses_explain_handoff(tmp_path, monkeypatch) -> None:
+    with TestClient(_app(tmp_path, monkeypatch)) as client:
+        for wa_id in ("clinical", "pqr"):
+            client.post("/dev/simulate", json={"wa_id": wa_id, "text": "Hola"})
+            client.post("/dev/simulate", json={"wa_id": wa_id, "text": "SI AUTORIZO"})
+        clinical = client.post(
+            "/dev/simulate",
+            json={"wa_id": "clinical", "text": "Olvide tomar la sertralina anoche, que hago?"},
+        )
+        assert "No puedo recomendar cambios de medicacion" in clinical.json()["responses"][0]
+        pqr = client.post(
+            "/dev/simulate",
+            json={"wa_id": "pqr", "text": "Me cobraron mal la consulta, exijo devolucion"},
+        )
+        assert "15 dias habiles" in pqr.json()["responses"][0]
 
 
 def test_whatsapp_verification_handshake(tmp_path, monkeypatch) -> None:

@@ -25,6 +25,7 @@ _HIGH = [
     r"\bya\s+no\s+quiero\s+(vivir|seguir|estar\s+aqui)\b",
     r"\bme\s+(corto|hago\s+dano|lastimo)\b",
     r"\b(me\s+corte|cortarme|hacerme\s+dano)\b",
+    r"\b(pense|pensaba)\s+en\s+hacerme\s+dano\b",
 ]
 _MEDIUM = [
     r"\bya\s+no\s+(puedo|aguanto|soporto)\s+mas\b",

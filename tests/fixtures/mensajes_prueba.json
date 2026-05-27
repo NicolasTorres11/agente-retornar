@@ -72,7 +72,174 @@
       "input": "Me corte anoche pero no fue grave",
       "expected_category": "consulta_clinica",
       "expected_action": "escalar_crisis_emocional"
+    },
+    {
+      "id": "T013",
+      "input": "Necesito cancelar mi cita del jueves",
+      "expected_category": "solicitud_cita",
+      "expected_action": "solicitar_info_adicional"
+    },
+    {
+      "id": "T014",
+      "input": "Reprogramar la consulta con el dr. Mendez",
+      "expected_category": "solicitud_cita",
+      "expected_action": "solicitar_info_adicional"
+    },
+    {
+      "id": "T015",
+      "input": "Llevo tres dias sin dormir y me siento muy ansiosa",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T016",
+      "input": "Solicito copia de mi historia clinica",
+      "expected_category": "pqr",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T017",
+      "input": "Me cobraron mal la consulta, exijo devolucion",
+      "expected_category": "pqr",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T018",
+      "input": "Donde estan ubicados",
+      "expected_category": "info_administrativa",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T019",
+      "input": "Cuanto cuesta una consulta particular",
+      "expected_category": "info_administrativa",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T020",
+      "input": "Como solicito autorizacion de mi EPS",
+      "expected_category": "info_administrativa",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T021",
+      "input": "Gracias",
+      "expected_category": "no_relevante",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T022",
+      "input": "GANA 500.000 PESOS YA! Click: bit.ly/abc",
+      "expected_category": "no_relevante",
+      "expected_action": "ignorar"
+    },
+    {
+      "id": "T023",
+      "input": "    ",
+      "expected_category": "no_relevante",
+      "expected_action": "ignorar"
+    },
+    {
+      "id": "T024",
+      "input": "Bonjour, je voudrais prendre rendez-vous",
+      "expected_category": "solicitud_cita",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T025",
+      "input": "Ayer pense en hacerme dano pero hoy estoy mejor",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_crisis_emocional"
+    },
+    {
+      "id": "T026",
+      "input": "Necesito ayuda urgente",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T027",
+      "input": "Necesito cita YA, me siento muy mal",
+      "expected_category": "solicitud_cita",
+      "expected_action": "solicitar_info_adicional"
+    },
+    {
+      "id": "T028",
+      "input": "Llame tres veces, nadie atiende, que horarios tienen",
+      "expected_category": "pqr",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T029",
+      "input": "Me siento triste pero ya estoy mejor que antes",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T030",
+      "input": "Vi una pelicula sobre suicidio, que triste",
+      "expected_category": "no_relevante",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T031",
+      "input": "Mi hijo de 14 anos esta muy deprimido, que hago",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T032",
+      "input": "Hola, mi mama tiene 70 anos y necesita psiquiatra. Tiene Sura",
+      "expected_category": "solicitud_cita",
+      "expected_action": "solicitar_info_adicional"
+    },
+    {
+      "id": "T033",
+      "input": "Estoy embarazada y tomando aripiprazol, es riesgoso?",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T034",
+      "input": "QUIERO HABLAR CON UNA PERSONA YA",
+      "expected_category": "no_relevante",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T035",
+      "input": "Voy a demandar a esta clinica, son unos irresponsables",
+      "expected_category": "pqr",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T036",
+      "input": "Estoy en la sede pero no encuentro psiquiatria, donde queda",
+      "expected_category": "info_administrativa",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T037",
+      "input": "Cuando entregan el certificado de incapacidad",
+      "expected_category": "info_administrativa",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T038",
+      "input": "kskskskskskksksksks",
+      "expected_category": "no_relevante",
+      "expected_action": "ignorar"
+    },
+    {
+      "id": "T039",
+      "input": "Hola, necesito agendar cita de control con psiquiatria, atiendo por Sanitas",
+      "expected_category": "solicitud_cita",
+      "expected_action": "solicitar_info_adicional"
+    },
+    {
+      "id": "T040",
+      "input": "Cuales son los horarios de atencion los sabados",
+      "expected_category": "info_administrativa",
+      "expected_action": "responder_automatico"
     }
   ]
 }
-

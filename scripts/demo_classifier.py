@@ -47,12 +47,17 @@ def _run_batch(dataset_path: Path) -> int:
     table.add_column("ID")
     table.add_column("Categoria esperada")
     table.add_column("Categoria obtenida")
+    table.add_column("Conf.")
     table.add_column("Accion")
     table.add_column("OK")
     for case in messages:
         result = classify(case["input"])
-        expected = case["expected_category"].split("|")
-        passed = result.category.value in expected
+        expected_category = case["expected_category"].split("|")
+        expected_action = case["expected_action"].split("|")
+        passed = (
+            result.category.value in expected_category
+            and result.suggested_action.value in expected_action
+        )
         matches += int(passed)
         is_crisis = "escalar_crisis_emocional" in case.get("expected_action", "")
         crisis_total += int(is_crisis)
@@ -63,12 +68,13 @@ def _run_batch(dataset_path: Path) -> int:
             case["id"],
             case["expected_category"],
             result.category.value,
+            f"{result.confidence:.2f}",
             result.suggested_action.value,
             "SI" if passed else "NO",
         )
     console.print(table)
     console.print(
-        f"Accuracy de categoria: {matches}/{len(messages)} = {matches / len(messages):.1%}"
+        f"Casos categoria/accion: {matches}/{len(messages)} = {matches / len(messages):.1%}"
     )
     if crisis_total:
         console.print(
