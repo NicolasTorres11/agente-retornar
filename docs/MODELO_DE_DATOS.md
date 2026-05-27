@@ -20,51 +20,7 @@ El archivo y sus journals (`-wal`, `-shm`) estan excluidos de Git.
 
 ## 2. Diagrama Entidad-Relacion
 
-```text
- +------------------+
- | sessions         |
- |------------------|
- | PK wa_id         |
- | consent_given    |
- | flow_state       |
- | last_activity    |
- +---------+--------+
-           |
-           | 1:N
-           v
- +------------------+
- | messages         |
- |------------------|
- | PK id            |
- | FK wa_id         |
- | message_id_meta  |
- | direction        |
- | content_encrypted|
- | category         |
- | risk_level       |
- | status           |
- +------------------+
-
- +------------------+             +------------------+
- | consents         |             | escalations      |
- |------------------|             |------------------|
- | PK id            |             | PK id            |
- | wa_id            |             | wa_id            |
- | accepted         |             | priority         |
- | created_at       |             | category         |
- +------------------+             | risk_level       |
-                                  +------------------+
-
- +------------------+
- | audit_log        |
- |------------------|
- | PK id            |
- | event            |
- | wa_id_hash       |
- | timestamp        |
- | details          |
- +------------------+
-```
+![Modelo de datos local SQLite, seguridad y operaciones](../img-architectures/modelo-datos-local.png)
 
 `sessions` y `messages` tienen relacion declarada por clave foranea. Las
 tablas `consents`, `escalations` y `audit_log` mantienen el identificador para
@@ -249,4 +205,3 @@ El diseno institucional descrito plantea capacidades adicionales:
 El modelo local demuestra la estructura de datos y las reglas principales,
 pero no debe utilizarse para almacenar informacion real de pacientes en una
 operacion productiva.
-
