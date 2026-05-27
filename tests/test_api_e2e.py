@@ -80,6 +80,22 @@ def test_authorized_admin_question_gets_direct_answer(tmp_path, monkeypatch) -> 
         assert "sabados de 8:00 a.m. a 1:00 p.m." in response.json()["responses"][0]
 
 
+def test_pretty_simulation_accepts_json_and_returns_readable_report(tmp_path, monkeypatch) -> None:
+    with TestClient(_app(tmp_path, monkeypatch)) as client:
+        client.post("/dev/simulate/pretty", json={"wa_id": "pretty", "text": "Hola"})
+        client.post("/dev/simulate/pretty", json={"wa_id": "pretty", "text": "SI AUTORIZO"})
+        response = client.post(
+            "/dev/simulate/pretty",
+            json={"wa_id": "pretty", "text": "Cuales son los horarios de atencion los sabados?"},
+        )
+        assert response.headers["content-type"].startswith("text/plain")
+        assert "CLINICA RETORNAR - DEMO LOCAL" in response.text
+        assert "Respuesta del agente:" in response.text
+        assert "sabados de 8:00 a.m. a 1:00 p.m." in response.text
+        assert "Categoria: info_administrativa" in response.text
+        assert "Accion: responder_automatico" in response.text
+
+
 def test_video_appointment_case_offers_simulated_availability(tmp_path, monkeypatch) -> None:
     with TestClient(_app(tmp_path, monkeypatch)) as client:
         client.post("/dev/simulate", json={"wa_id": "video", "text": "Hola"})

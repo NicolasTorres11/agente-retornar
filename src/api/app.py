@@ -48,6 +48,18 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     app.state.service = service
     app.state.settings = config
 
+    async def process_simulation(body: SimulateRequest):
+        if config.app_env != "local":
+            raise HTTPException(status_code=404, detail="No disponible")
+        return await service.process(
+            InboundMessage(
+                wa_id=body.wa_id,
+                user_name=body.name,
+                text=body.text,
+                message_id=f"dev.{uuid4()}",
+            )
+        )
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok", "send_mode": config.whatsapp_send_mode}
@@ -80,16 +92,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
 
     @app.post("/dev/simulate")
     async def simulate(body: SimulateRequest) -> dict[str, object]:
-        if config.app_env != "local":
-            raise HTTPException(status_code=404, detail="No disponible")
-        outcome = await service.process(
-            InboundMessage(
-                wa_id=body.wa_id,
-                user_name=body.name,
-                text=body.text,
-                message_id=f"dev.{uuid4()}",
-            )
-        )
+        outcome = await process_simulation(body)
         return {
             "status": outcome.status,
             "responses": outcome.responses,
@@ -97,6 +100,35 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
                 outcome.classification.model_dump(mode="json") if outcome.classification else None
             ),
         }
+
+    @app.post("/dev/simulate/pretty", response_class=PlainTextResponse)
+    async def simulate_pretty(body: SimulateRequest) -> PlainTextResponse:
+        outcome = await process_simulation(body)
+        result = outcome.classification
+        responses = outcome.responses or ["(sin respuesta automatica)"]
+        lines = [
+            "CLINICA RETORNAR - DEMO LOCAL",
+            "=" * 64,
+            f"Usuario: {body.text or '<mensaje vacio>'}",
+            "",
+            "Respuesta del agente:",
+            *[f"  {response}" for response in responses],
+            "",
+            "Resultado tecnico:",
+            f"  Estado: {outcome.status}",
+        ]
+        if result:
+            lines.extend(
+                [
+                    f"  Categoria: {result.category.value}",
+                    f"  Accion: {result.suggested_action.value}",
+                    f"  Confianza: {result.confidence:.2f}",
+                    f"  Riesgo: {result.metadata.risk_level.value}",
+                    f"  Modelo/regla: {result.metadata.model_used or 'no aplica'}",
+                ]
+            )
+        lines.append("=" * 64)
+        return PlainTextResponse("\n".join(lines))
 
     @app.websocket("/ws/whatsapp")
     async def whatsapp_bridge(websocket: WebSocket) -> None:

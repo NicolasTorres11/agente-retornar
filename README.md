@@ -88,6 +88,18 @@ python scripts/demo_classifier.py --offline --batch tests/fixtures/mensajes_prue
 pytest -q tests/test_evaluation_matrix.py
 ```
 
+Para enviar JSON pero ver una respuesta ordenada en lugar del JSON crudo, usa
+`/dev/simulate/pretty`:
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/dev/simulate/pretty \
+  -H 'Content-Type: application/json' \
+  -d '{"wa_id":"demo-pretty","text":"Hola"}'
+```
+
+Todos los comandos y casos de prueba estan en
+[`docs/CASOS_DE_PRUEBA.md`](docs/CASOS_DE_PRUEBA.md).
+
 Los casos definidos en las skills tienen reglas locales deterministicas para
 la demostracion: riesgo, citas, PQR, informacion administrativa, idioma,
 spam y ambiguedad no dependen de una respuesta variable del modelo. Azure
