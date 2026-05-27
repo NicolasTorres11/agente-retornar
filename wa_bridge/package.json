@@ -1,0 +1,18 @@
+{
+  "name": "retornar-wa-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Puente de demostracion WhatsApp Web (Baileys) a FastAPI WebSocket",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.16",
+    "dotenv": "^16.4.7",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.18.0"
+  }
+}

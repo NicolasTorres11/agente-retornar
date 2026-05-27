@@ -1,0 +1,78 @@
+{
+  "version": "demo-1.0",
+  "mensajes": [
+    {
+      "id": "T001",
+      "input": "Hola, necesito agendar cita con psiquiatria",
+      "expected_category": "solicitud_cita",
+      "expected_action": "responder_automatico|solicitar_info_adicional"
+    },
+    {
+      "id": "T002",
+      "input": "Quiero una cita",
+      "expected_category": "solicitud_cita",
+      "expected_action": "solicitar_info_adicional"
+    },
+    {
+      "id": "T003",
+      "input": "Olvide tomar la sertralina anoche, que hago",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T004",
+      "input": "Ya no le veo sentido a nada, mejor desaparecer",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_crisis_emocional"
+    },
+    {
+      "id": "T005",
+      "input": "Me quiero matar, ya tengo las pastillas",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_crisis_emocional"
+    },
+    {
+      "id": "T006",
+      "input": "Voy a poner una queja porque nadie me atiende",
+      "expected_category": "pqr",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T007",
+      "input": "Cuales son los horarios de atencion los sabados",
+      "expected_category": "info_administrativa",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T008",
+      "input": "Atienden por Sanitas",
+      "expected_category": "info_administrativa",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T009",
+      "input": "Hola buenas tardes",
+      "expected_category": "no_relevante",
+      "expected_action": "responder_automatico"
+    },
+    {
+      "id": "T010",
+      "input": "",
+      "expected_category": "no_relevante",
+      "expected_action": "ignorar"
+    },
+    {
+      "id": "T011",
+      "input": "Hi, I need to book an appointment with a psychiatrist",
+      "expected_category": "solicitud_cita",
+      "expected_action": "escalar_humano"
+    },
+    {
+      "id": "T012",
+      "input": "Me corte anoche pero no fue grave",
+      "expected_category": "consulta_clinica",
+      "expected_action": "escalar_crisis_emocional"
+    }
+  ]
+}
+
